@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <stdlib.h>
+#include <math.h>
 using namespace std;
 
 /**
@@ -298,7 +299,7 @@ int main(int argc, char *argv[])
 	// Bucle para el número de iteraciones
 	for (int i = 0; i < num_iteraciones; ++i)
 	{
-		printf("Iteración %d\n", i);
+		// printf("Iteración %d\n", i);
 		for (unsigned int j = 0; j < vec_ast.size(); ++j) // Iterador principal de Asteroides
 		{
 			if (vec_ast[j].get_pos_x() <= 0) // Efecto rebote x <= 0

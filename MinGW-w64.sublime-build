@@ -1,0 +1,26 @@
+{
+    "cmd": ["g++", "-o", "${file_path}/${file_base_name}.exe", "-static-libgcc", "-static-libstdc++", "*.cpp", "-std=c++14", "-Wall", "-Wextra", "-Wno-deprecated", "-Werror", "-pedantic", "-pedantic-errors"],
+    "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
+    "working_dir": "${file_path}",
+    "selector": "source.c, source.cpp, source.c++",
+    "path": "c:/Program Files/mingw-w64/mingw64/bin",
+    "shell": true,
+    "variants": [
+        {
+            "name": "Run",
+            "cmd": ["g++", "-o", "${file_path}/${file_base_name}.exe", "-static-libgcc", "-static-libstdc++", "*.cpp", "&", "${file_path}/${file_base_name}.exe"]
+        },
+        {
+            "name": "15 10 5 55.500 2000",
+            "cmd": ["${file_path}/${file_base_name}.exe", "15", "2", "5", "55.550", "2000"]
+        },
+        {
+            "name": "2 1 4 55.500 2000",
+            "cmd": ["${file_path}/${file_base_name}.exe", "2", "1", "4", "55.550", "2000"]
+        },
+        {
+            "name": "1000 3000 1000 55.550 2000",
+            "cmd": ["${file_path}/${file_base_name}.exe", "1000", "3000", "1000", "55.550", "2000"]
+        }
+    ]
+}

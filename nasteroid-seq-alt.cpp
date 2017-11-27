@@ -1,5 +1,4 @@
 #include <iostream>
-#include <omp.h>
 #include <random>
 #include <stdlib.h>
 #include <math.h>
@@ -126,7 +125,6 @@ int checkArgs(int argc, char *argv[])
  */
 int main(int argc, char *argv[])
 {
-	omp_set_num_threads(8);
 	checkArgs(argc, argv); // Se validan los argumentos antes de nada
 
 	// Se almacenan los argumentos en variables con nombres más cómodos
@@ -195,7 +193,7 @@ int main(int argc, char *argv[])
 
 	// Se almacenan los datos generados en el fichero init_conf.txt
 	FILE * initFile;
-	initFile = fopen("init_conf-par.txt", "w");
+	initFile = fopen("init_conf-alt.txt", "w");
 	fprintf(initFile, "%d %d %d %.3f %d\n", num_asteroides, num_iteraciones, num_planetas, pos_rayo, semilla); // Argumentos introducidos
 	for (unsigned int i = 0; i < vec_ast.size(); ++i)
 	{
@@ -210,7 +208,8 @@ int main(int argc, char *argv[])
 
 	// Bucle para el número de iteraciones
 	// Variables temporales utilizadas en los cálculos, sólo se declaran una vez.
-	double ast1_pos_x, ast1_pos_y, ast1_mas, pla1_pos_x, pla1_pos_y, pla1_mas;
+	double distancia_no_sqrt, distancia_real;
+	double pendiente, angulo, temp_fuer, temp_fuer_x, temp_fuer_y, ast1_pos_x, ast1_pos_y, ast1_mas, ast2_pos_x, ast2_pos_y, ast2_mas, pla1_pos_x, pla1_pos_y, pla1_mas;
 	for (int i = 0; i < num_iteraciones; ++i)
 	{
 		for (unsigned int j = 0; j < vec_ast.size(); ++j) // Iterador principal de Asteroides
@@ -221,100 +220,73 @@ int main(int argc, char *argv[])
 			ast1_mas	= vec_ast[j].get_m();		// Asteroide j, masa
 
 			//Cálculo de fuerzas Asteroide -> Asteroide
-			#pragma omp parallel for
 			for (unsigned int k = 0; k < vec_ast.size(); ++k) // Iterador secundario de Asteroides
 			{
 				// Se extraen los datos del asteroide k
-				double ast2_pos_x	= vec_ast[k].get_pos_x();	// Asteroide k, coordenada x
-				double ast2_pos_y	= vec_ast[k].get_pos_y();	// Asteroide k, coordenada y
-				double ast2_mas		= vec_ast[k].get_m();		// Asteroide k, masa
+				ast2_pos_x	= vec_ast[k].get_pos_x();	// Asteroide k, coordenada x
+				ast2_pos_y	= vec_ast[k].get_pos_y();	// Asteroide k, coordenada y
+				ast2_mas	= vec_ast[k].get_m();		// Asteroide k, masa
 
 				// Distancia sin aplicar la raíz cuadrada, para más precisión en el cálculo de la fuerza, ya que se evita hacer la raíz y después elevar al cuadrado
-				double distancia_no_sqrt = ((ast1_pos_x - ast2_pos_x) * (ast1_pos_x - ast2_pos_x)) + ((ast1_pos_y - ast2_pos_y) * (ast1_pos_y - ast2_pos_y));
-				double distancia_real = sqrt(distancia_no_sqrt);
+				distancia_no_sqrt = ((ast1_pos_x - ast2_pos_x) * (ast1_pos_x - ast2_pos_x)) + ((ast1_pos_y - ast2_pos_y) * (ast1_pos_y - ast2_pos_y));
+				distancia_real = sqrt(distancia_no_sqrt);
 
 				if (distancia_real > dmin)
 				{
-					double pendiente = (ast2_pos_y - ast1_pos_y) / (ast2_pos_x - ast1_pos_x); // Cálculo de la pendiente
+					pendiente = (ast2_pos_y - ast1_pos_y) / (ast2_pos_x - ast1_pos_x); // Cálculo de la pendiente
 					if (!isinf(pendiente) && (pendiente > 1 || pendiente < -1))
 					{
 						pendiente -= trunc(pendiente); // Truncado de la pendiente
 					}
-					double angulo = atan(pendiente); // Cálculo del ángulo de efecto
+					angulo = atan(pendiente); // Cálculo del ángulo de efecto
 
-					double temp_fuer = gravity * ast1_mas * ast2_mas / distancia_no_sqrt; // Fuerza total
+					temp_fuer = gravity * ast1_mas * ast2_mas / distancia_no_sqrt; // Fuerza total
 					if (temp_fuer > 200)
 					{
 						temp_fuer = 200; // Truncado de la fuerza
 					}
 
-					double temp_fuer_x = temp_fuer * cos(angulo); // Componente x de la fuerza total
-					double temp_fuer_y = temp_fuer * sin(angulo); // Componente y de la fuerza total
+					temp_fuer_x = temp_fuer * cos(angulo); // Componente x de la fuerza total
+					temp_fuer_y = temp_fuer * sin(angulo); // Componente y de la fuerza total
 
-					vec_ast[k].set_fue_x(vec_ast[k].get_fue_x() + temp_fuer_x);
+					// vec_ast[j].set_fue_x(vec_ast[j].get_fue_x() - temp_fuer_x); // Al asteroide j se le suma
+					// vec_ast[j].set_fue_y(vec_ast[j].get_fue_y() - temp_fuer_y);
+					vec_ast[k].set_fue_x(vec_ast[k].get_fue_x() + temp_fuer_x); // Al asteroide k se le resta
 					vec_ast[k].set_fue_y(vec_ast[k].get_fue_y() + temp_fuer_y);
 				}
 			}
-			// for (unsigned int k = 0; k < vec_pla.size(); ++k) // Iterador de Planetas
-			// {
-			// 	// Acumulación de fuerzas en las variables fuerza_x y fuerza_y
-			// 	double k_pos_x = vec_pla[k].get_pos_x();
-			// 	double k_pos_y = vec_pla[k].get_pos_y();
-			// 	double k_mas = vec_pla[k].get_m();
-
-			// 	double distancia_no_sqrt = ((j_pos_x - k_pos_x) * (j_pos_x - k_pos_x)) + ((j_pos_y - k_pos_y) * (j_pos_y - k_pos_y));
-
-			// 	double pendiente = (k_pos_y - j_pos_y) / (k_pos_x - j_pos_x);
-			// 	if (!isinf(pendiente) && (pendiente > 1 || pendiente < -1))
-			// 	{
-			// 		pendiente -= trunc(pendiente);
-			// 	}
-			// 	double angulo = atan(pendiente);
-
-			// 	double temp_fuer = gravity * j_mas * k_mas / distancia_no_sqrt;
-			// 	if (temp_fuer > 200)
-			// 	{
-			// 		temp_fuer = 200;
-			// 	}
-
-			// 	double temp_fuer_x = temp_fuer * cos(angulo);
-			// 	double temp_fuer_y = temp_fuer * sin(angulo);
-
-			// 	vec_ast[j].set_fue_x(vec_ast[j].get_fue_x() + temp_fuer_x);
-			// 	vec_ast[j].set_fue_y(vec_ast[j].get_fue_y() + temp_fuer_y);
-			// }
 		}
 		for (unsigned int j = 0; j < vec_pla.size(); ++j)
 		{
 			pla1_pos_x	= vec_pla[j].get_pos_x();
 			pla1_pos_y	= vec_pla[j].get_pos_y();
 			pla1_mas	= vec_pla[j].get_m();
+
 			// Cálculo de fuerzas Planeta -> Asteroide
-			#pragma omp parallel for
 			for (unsigned int k = 0; k < vec_ast.size(); ++k) // Iterador de Planetas
 			{
 				// Acumulación de fuerzas en las variables fuerza_x y fuerza_y
-				double ast2_pos_x	= vec_ast[k].get_pos_x();
-				double ast2_pos_y	= vec_ast[k].get_pos_y();
-				double ast2_mas		= vec_ast[k].get_m();
+				ast2_pos_x	= vec_ast[k].get_pos_x();
+				ast2_pos_y	= vec_ast[k].get_pos_y();
+				ast2_mas	= vec_ast[k].get_m();
 
-				double distancia_no_sqrt = ((pla1_pos_x - ast2_pos_x) * (pla1_pos_x - ast2_pos_x)) + ((pla1_pos_y - ast2_pos_y) * (pla1_pos_y - ast2_pos_y));
+				distancia_no_sqrt = ((pla1_pos_x - ast2_pos_x) * (pla1_pos_x - ast2_pos_x)) + ((pla1_pos_y - ast2_pos_y) * (pla1_pos_y - ast2_pos_y));
 
-				double pendiente = (ast2_pos_y - pla1_pos_y) / (ast2_pos_x - pla1_pos_x);
+				pendiente = (ast2_pos_y - pla1_pos_y) / (ast2_pos_x - pla1_pos_x);
 				if (!isinf(pendiente) && (pendiente > 1 || pendiente < -1))
 				{
 					pendiente -= trunc(pendiente);
 				}
-				double angulo = atan(pendiente);
+				angulo = atan(pendiente);
 
-				double temp_fuer = gravity * pla1_mas * ast2_mas / distancia_no_sqrt;
+				temp_fuer = gravity * pla1_mas * ast2_mas / distancia_no_sqrt;
 				if (temp_fuer > 200)
 				{
 					temp_fuer = 200;
 				}
 
-				double temp_fuer_x = temp_fuer * cos(angulo);
-				double temp_fuer_y = temp_fuer * sin(angulo);
+				temp_fuer_x = temp_fuer * cos(angulo);
+				temp_fuer_y = temp_fuer * sin(angulo);
 
 				vec_ast[k].set_fue_x(vec_ast[k].get_fue_x() + temp_fuer_x);
 				vec_ast[k].set_fue_y(vec_ast[k].get_fue_y() + temp_fuer_y);
@@ -378,7 +350,7 @@ int main(int argc, char *argv[])
 
 	// Se almacenan los resultados en el fichero out.txt
 	FILE * outFile;
-	outFile = fopen("out-par.txt", "w");
+	outFile = fopen("out-alt.txt", "w");
 	for (unsigned int i = 0; i < vec_ast.size(); ++i)
 	{
 		fprintf(outFile, "%.3f %.3f %.3f %.3f %.3f\n",	vec_ast[i].get_pos_x(),
